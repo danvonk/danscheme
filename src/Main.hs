@@ -85,11 +85,37 @@ showVal (Bool False) = "#f"
 showVal (List contents) = "(" ++ unwordsList contents ++ ")"
 showVal (DottedList head tail) = "(" ++ unwordsList head ++ ". " ++ showVal tail ++ ")"
 
+unpackNum :: LispVal -> Integer
+unpackNum (Number n) = n
+unpackNum (String n) = let parsed = reads n :: [(Integer, String)] in
+                         if null parsed
+                         then 0
+                         else fst $ parsed !! 0
+unpackNum (List [n]) = unpackNum n
+unpackNum _ = 0
+
+numericBinOp :: (Integer -> Integer -> Integer) -> [LispVal] -> LispVal
+numericBinOp op params = Number $ foldl1 op $ map unpackNum params
+
+primitives :: [(String, [LispVal] -> LispVal)]
+primitives = [("+", numericBinOp (+)),
+              ("-", numericBinOp (-)),
+              ("*", numericBinOp (*)),
+              ("/", numericBinOp div),
+              ("mod", numericBinOp mod),
+              ("quotient", numericBinOp quot),
+              ("remainder", numericBinOp rem)]
+
+
+apply :: String -> [LispVal] -> LispVal
+apply func args = maybe (Bool False) ($ args) $ lookup func primitives
+
 eval :: LispVal -> LispVal
 eval val@(String _) = val
 eval val@(Number _) = val
 eval val@(Bool _) = val
 eval (List [Atom "quote", val]) = val
+eval (List (Atom func : args)) = apply func $ map eval args
 
 main :: IO ()
 main = getArgs >>= print . eval . readExpr . head
