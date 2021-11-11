@@ -1,5 +1,7 @@
 module Main where
 
+import Error
+
 import System.Environment
 import Text.ParserCombinators.Parsec hiding (spaces)
 import Control.Monad
@@ -69,8 +71,8 @@ parseQuoted = do
 
 readExpr :: String -> LispVal
 readExpr input = case parse parseExpr "lisp" input of
-  Left err -> String $ "No match: " ++ show err
-  Right val -> val
+  Left err -> throwError $ Parser err
+  Right val -> return val
 
 unwordsList :: [LispVal] -> String
 unwordsList = unwords . map showVal
